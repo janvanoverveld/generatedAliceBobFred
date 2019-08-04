@@ -1,64 +1,64 @@
-import {IBob, IBob_S1,IBob_S2,IBob_S3,IBob_S4,IBob_S5,IBob_S6,IBob_S7,IBob_Done,executeProtocol} from './Bob';
+import {IBob, IBob_S1,IBob_S2,IBob_S3,IBob_S4,IBob_S5,IBob_S6,IBob_S7,IBob_S8,executeProtocol} from './Bob';
 import {RES} from './Message';
 
-async function protocol(s1:IBob_S1):Promise<IBob_Done> {
-   let nextState:IBob = await s1.receive();
+async function protocol(s1:IBob_S1):Promise<IBob_S7> {
+   let nextState:IBob = await s1.recv();
    while ( true ){
       console.log(`switching state ${nextState.state}`);
       switch (nextState.state) {
          case "S2": {
-            let s2 = <IBob_S2>nextState;
-            let add = s2.add;
-            let res = new RES( add.value1 + add.value2 );
+            const s2 = <IBob_S2>nextState;
+            const add = s2.add;
+            const res = new RES( add.value1 + add.value2 );
             console.log(`stuur ${res.name} ${res.sum} naar Alice `);
-            s1 = s2.sendRES(res);
-            nextState = await s1.receive();
+            s1 = await s2.sendRES(res);
+            nextState = await s1.recv();
             break;
          }
          case "S3": {
-            let s3 = <IBob_S3>nextState;
-            let bye = s3.bye;
-            console.log(`bye ontvangen van Alice    ${nextState.state}`);
-            nextState = await s3.receive();
+            const s3 = <IBob_S3>nextState;
+            const add = s3.add;
+            const res = new RES( add.value1 + add.value2 );
+            console.log(`stuur ${res.name} ${res.sum} naar fred `);
+            s1 = await s3.sendRES(res);
+            nextState = await s1.recv();
             break;
          }
          case "S4": {
-            let s4 = <IBob_S4>nextState;
-            let bye = s4.bye;
+            const s4 = <IBob_S4>nextState;
+            const bye = s4.bye;
             console.log(`bye ontvangen van Fred  ${nextState.state}`);
-            nextState = await s4.receive();
+            nextState = await s4.recv();
             break;
          }
          case "S5": {
             let s5 = <IBob_S5>nextState;
-            let add = s5.add;
-            let res = new RES( add.value1 + add.value2 );
-            console.log(`stuur ${res.name} ${res.sum} naar fred `);
-            s1 = s5.sendRES(res);
-            nextState = await s1.receive();
+            let bye = s5.bye;
+            console.log(`bye ontvangen van Alice    ${nextState.state}`);
+            nextState = await s5.recv();
             break;
          }
          case "S6": {
-            let s6 = <IBob_S6>nextState;
-            let add = s6.add;
-            let res = new RES( add.value1 + add.value2 );
+            const s6 = <IBob_S6>nextState;
+            const add = s6.add;
+            const res = new RES( add.value1 + add.value2 );
             console.log(`stuur ${res.name} ${res.sum} naar Alice `);
-            let s3 = s6.sendRES(res);
-            nextState = await s3.receive();
+            const s4 = await s6.sendRES(res);
+            nextState = await s4.recv();
+            break;
+         }
+         case "S8": {
+            const s8 = <IBob_S8>nextState;
+            const add = s8.add;
+            const res = new RES( add.value1 + add.value2 );
+            console.log(`stuur ${res.name} ${res.sum} naar Fred `);
+            const s5 = await s8.sendRES(res);
+            nextState = await s5.recv();
             break;
          }
          case "S7": {
-            let s7 = <IBob_S7>nextState;
-            let add = s7.add;
-            let res = new RES( add.value1 + add.value2 );
-            console.log(`stuur ${res.name} ${res.sum} naar Fred `);
-            let s4 = s7.sendRES(res);
-            nextState = await s4.receive();
-            break;
-         }
-         case "Done": {
             console.log('in de DONE van Bob');
-            let sdone=<IBob_Done>nextState;
+            const sdone=<IBob_S7>nextState;
             return new Promise(
                resolve => resolve(sdone)
             );

@@ -10,19 +10,17 @@ interface IFred {
 interface IFred_S1 extends IFred {
     readonly state: "S1";
     res?: RES;
-    sendADD(add: ADD): IFred_S2;
-    sendBYE(bye: BYE): IFred_Done;
+    sendADD(add: ADD): Promise<IFred_S2>;
+    sendBYE(bye: BYE): Promise<IFred_S3>;
 }
 
 interface IFred_S2 extends IFred {
     readonly state: "S2";
-    add: ADD;
-    receive(): Promise<IFred_S1>;
+    recv(): Promise<IFred_S1>;
 }
 
-interface IFred_Done extends IFred {
-    readonly state: "Done";
-    bye: BYE;
+interface IFred_S3 extends IFred {
+    readonly state: "S3";
 }
 
 abstract class Fred {
@@ -40,24 +38,24 @@ class Fred_S1 extends Fred implements IFred_S1 {
     constructor(public res?: RES) {
         super();
     }
-    sendADD(add: ADD): IFred_S2 {
+    async sendADD(add: ADD): Promise<IFred_S2> {
         super.checkOneTransitionPossible();
-        sendMessage(roles.fred, roles.bob, add);
-        return new Fred_S2(add);
+        await sendMessage(roles.fred, roles.bob, add);
+        return new Promise(resolve => resolve(new Fred_S2));
     }
-    sendBYE(bye: BYE): IFred_Done {
+    async sendBYE(bye: BYE): Promise<IFred_S3> {
         super.checkOneTransitionPossible();
-        sendMessage(roles.fred, roles.bob, bye);
-        return new Fred_Done(bye);
+        await sendMessage(roles.fred, roles.bob, bye);
+        return new Promise(resolve => resolve(new Fred_S3));
     }
 }
 
 class Fred_S2 extends Fred implements IFred_S2 {
     public readonly state = "S2";
-    constructor(public add: ADD) {
+    constructor() {
         super();
     }
-    async receive(): Promise<IFred_S1> {
+    async recv(): Promise<IFred_S1> {
         try {
             super.checkOneTransitionPossible();
         }
@@ -76,19 +74,19 @@ class Fred_S2 extends Fred implements IFred_S2 {
     }
 }
 
-class Fred_Done extends Fred implements IFred_Done {
-    public readonly state = "Done";
-    constructor(public bye: BYE) {
+class Fred_S3 extends Fred implements IFred_S3 {
+    public readonly state = "S3";
+    constructor() {
         super();
         receiveMessageServer.terminate();
     }
 }
 
-export { IFred, IFred_S1, IFred_S2, IFred_Done };
+export { IFred, IFred_S1, IFred_S2, IFred_S3 };
 
-export async function executeProtocol(f: (S1: IFred_S1) => Promise<IFred_Done>, host: string, port: number) {
+export async function executeProtocol(f: (IFred_S1: IFred_S1) => Promise<IFred_S3>, host: string, port: number) {
     console.log(`Fred started ${new Date()}`);
     await initialize(roles.fred, port, host);
     let done = await f(new Fred_S1());
-    return new Promise<IFred_Done>(resolve => resolve(done));
+    return new Promise<IFred_S3>(resolve => resolve(done));
 }
