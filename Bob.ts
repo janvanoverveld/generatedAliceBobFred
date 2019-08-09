@@ -1,59 +1,56 @@
 import { receiveMessageServer, waitForMessage } from "./receiveMessageServer";
-import { ADD, BYE, RES } from "./Message";
+import { ADD, BYE, RES, Message, NOMESSAGE } from "./Message";
 import { sendMessage } from "./sendMessage";
 import { roles, initialize, connectedRoles, OneTransitionPossibleException } from "./globalObjects";
 
+enum messages {
+    ADD = "ADD",
+    BYE = "BYE",
+    RES = "RES",
+    NOMESSAGE = "NOMESSAGE"
+}
+
 interface IBob {
-    state: string;
+    messageFrom: roles;
+    messageType: messages;
+    message: Message;
 }
 
 interface IBob_S1 extends IBob {
-    readonly state: "S1";
     recv(): Promise<IBob_S2 | IBob_S3 | IBob_S4 | IBob_S5>;
 }
 
 interface IBob_S2 extends IBob {
-    readonly state: "S2";
-    add: ADD;
     sendRES(res: RES): Promise<IBob_S1>;
 }
 
 interface IBob_S3 extends IBob {
-    readonly state: "S3";
-    add: ADD;
     sendRES(res: RES): Promise<IBob_S1>;
 }
 
 interface IBob_S4 extends IBob {
-    readonly state: "S4";
-    bye?: BYE;
     recv(): Promise<IBob_S6 | IBob_S7>;
 }
 
 interface IBob_S5 extends IBob {
-    readonly state: "S5";
-    bye?: BYE;
     recv(): Promise<IBob_S8 | IBob_S7>;
 }
 
 interface IBob_S6 extends IBob {
-    readonly state: "S6";
-    add: ADD;
     sendRES(res: RES): Promise<IBob_S4>;
 }
 
 interface IBob_S7 extends IBob {
-    readonly state: "S7";
-    bye?: BYE;
 }
 
 interface IBob_S8 extends IBob {
-    readonly state: "S8";
-    add: ADD;
     sendRES(res: RES): Promise<IBob_S5>;
 }
 
 abstract class Bob {
+    public messageFrom = roles.bob;
+    public messageType = messages.NOMESSAGE;
+    public message = new NOMESSAGE();
     constructor(protected transitionPossible: boolean = true) { }
     ;
     protected checkOneTransitionPossible() {
@@ -64,7 +61,6 @@ abstract class Bob {
 }
 
 class Bob_S1 extends Bob implements IBob_S1 {
-    public readonly state = "S1";
     constructor() {
         super();
     }
@@ -79,19 +75,19 @@ class Bob_S1 extends Bob implements IBob_S1 {
         return new Promise(resolve => {
             switch (msg.name + msg.from) {
                 case ADD.name + roles.alice: {
-                    resolve(new Bob_S2((<ADD>msg)));
+                    resolve(new Bob_S2(msg.from, messages.ADD, msg));
                     break;
                 }
                 case ADD.name + roles.fred: {
-                    resolve(new Bob_S3((<ADD>msg)));
+                    resolve(new Bob_S3(msg.from, messages.ADD, msg));
                     break;
                 }
                 case BYE.name + roles.alice: {
-                    resolve(new Bob_S4((<BYE>msg)));
+                    resolve(new Bob_S4(msg.from, messages.BYE, msg));
                     break;
                 }
                 case BYE.name + roles.fred: {
-                    resolve(new Bob_S5((<BYE>msg)));
+                    resolve(new Bob_S5(msg.from, messages.BYE, msg));
                     break;
                 }
             }
@@ -100,9 +96,11 @@ class Bob_S1 extends Bob implements IBob_S1 {
 }
 
 class Bob_S2 extends Bob implements IBob_S2 {
-    public readonly state = "S2";
-    constructor(public add: ADD) {
+    constructor(messageFrom: roles, messageType: messages, message: Message) {
         super();
+        super.messageFrom = messageFrom;
+        super.messageType = messageType;
+        super.message = message;
     }
     async sendRES(res: RES): Promise<IBob_S1> {
         super.checkOneTransitionPossible();
@@ -112,9 +110,11 @@ class Bob_S2 extends Bob implements IBob_S2 {
 }
 
 class Bob_S3 extends Bob implements IBob_S3 {
-    public readonly state = "S3";
-    constructor(public add: ADD) {
+    constructor(messageFrom: roles, messageType: messages, message: Message) {
         super();
+        super.messageFrom = messageFrom;
+        super.messageType = messageType;
+        super.message = message;
     }
     async sendRES(res: RES): Promise<IBob_S1> {
         super.checkOneTransitionPossible();
@@ -124,9 +124,14 @@ class Bob_S3 extends Bob implements IBob_S3 {
 }
 
 class Bob_S4 extends Bob implements IBob_S4 {
-    public readonly state = "S4";
-    constructor(public bye?: BYE) {
+    constructor(messageFrom?: roles, messageType?: messages, message?: Message) {
         super();
+        if (messageFrom)
+            super.messageFrom = messageFrom;
+        if (messageType)
+            super.messageType = messageType;
+        if (message)
+            super.message = message;
     }
     async recv(): Promise<IBob_S6 | IBob_S7> {
         try {
@@ -139,11 +144,11 @@ class Bob_S4 extends Bob implements IBob_S4 {
         return new Promise(resolve => {
             switch (msg.name + msg.from) {
                 case ADD.name + roles.fred: {
-                    resolve(new Bob_S6((<ADD>msg)));
+                    resolve(new Bob_S6(msg.from, messages.ADD, msg));
                     break;
                 }
                 case BYE.name + roles.fred: {
-                    resolve(new Bob_S7((<BYE>msg)));
+                    resolve(new Bob_S7(msg.from, messages.BYE, msg));
                     break;
                 }
             }
@@ -152,9 +157,14 @@ class Bob_S4 extends Bob implements IBob_S4 {
 }
 
 class Bob_S5 extends Bob implements IBob_S5 {
-    public readonly state = "S5";
-    constructor(public bye?: BYE) {
+    constructor(messageFrom?: roles, messageType?: messages, message?: Message) {
         super();
+        if (messageFrom)
+            super.messageFrom = messageFrom;
+        if (messageType)
+            super.messageType = messageType;
+        if (message)
+            super.message = message;
     }
     async recv(): Promise<IBob_S8 | IBob_S7> {
         try {
@@ -167,11 +177,11 @@ class Bob_S5 extends Bob implements IBob_S5 {
         return new Promise(resolve => {
             switch (msg.name + msg.from) {
                 case ADD.name + roles.alice: {
-                    resolve(new Bob_S8((<ADD>msg)));
+                    resolve(new Bob_S8(msg.from, messages.ADD, msg));
                     break;
                 }
                 case BYE.name + roles.alice: {
-                    resolve(new Bob_S7((<BYE>msg)));
+                    resolve(new Bob_S7(msg.from, messages.BYE, msg));
                     break;
                 }
             }
@@ -180,9 +190,11 @@ class Bob_S5 extends Bob implements IBob_S5 {
 }
 
 class Bob_S6 extends Bob implements IBob_S6 {
-    public readonly state = "S6";
-    constructor(public add: ADD) {
+    constructor(messageFrom: roles, messageType: messages, message: Message) {
         super();
+        super.messageFrom = messageFrom;
+        super.messageType = messageType;
+        super.message = message;
     }
     async sendRES(res: RES): Promise<IBob_S4> {
         super.checkOneTransitionPossible();
@@ -192,17 +204,24 @@ class Bob_S6 extends Bob implements IBob_S6 {
 }
 
 class Bob_S7 extends Bob implements IBob_S7 {
-    public readonly state = "S7";
-    constructor(public bye?: BYE) {
+    constructor(messageFrom?: roles, messageType?: messages, message?: Message) {
         super();
+        if (messageFrom)
+            super.messageFrom = messageFrom;
+        if (messageType)
+            super.messageType = messageType;
+        if (message)
+            super.message = message;
         receiveMessageServer.terminate();
     }
 }
 
 class Bob_S8 extends Bob implements IBob_S8 {
-    public readonly state = "S8";
-    constructor(public add: ADD) {
+    constructor(messageFrom: roles, messageType: messages, message: Message) {
         super();
+        super.messageFrom = messageFrom;
+        super.messageType = messageType;
+        super.message = message;
     }
     async sendRES(res: RES): Promise<IBob_S5> {
         super.checkOneTransitionPossible();
@@ -211,11 +230,15 @@ class Bob_S8 extends Bob implements IBob_S8 {
     }
 }
 
-export { IBob, IBob_S1, IBob_S2, IBob_S3, IBob_S4, IBob_S5, IBob_S6, IBob_S7, IBob_S8 };
+type Bob_Start = IBob_S1;
+type Bob_End = IBob_S7;
 
-export async function executeProtocol(f: (IBob_S1: IBob_S1) => Promise<IBob_S7>, host: string, port: number) {
+async function executeProtocol(f: (Bob_Start: Bob_Start) => Promise<Bob_End>, host: string, port: number) {
     console.log(`Bob started ${new Date()}`);
     await initialize(roles.bob, port, host);
     let done = await f(new Bob_S1());
-    return new Promise<IBob_S7>(resolve => resolve(done));
+    return new Promise<Bob_End>(resolve => resolve(done));
 }
+
+export { IBob, IBob_S1, IBob_S2, IBob_S3, IBob_S4, IBob_S5, IBob_S6, IBob_S7, IBob_S8, messages, Bob_Start, Bob_End, executeProtocol, roles };
+
