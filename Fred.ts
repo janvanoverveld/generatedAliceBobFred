@@ -6,17 +6,16 @@ import { roles, initialize, connectedRoles, OneTransitionPossibleException } fro
 enum messages {
     ADD = "ADD",
     BYE = "BYE",
-    RES = "RES",
-    NOMESSAGE = "NOMESSAGE"
+    RES = "RES"
 }
 
 interface IFred {
-    messageFrom: roles;
-    messageType: messages;
-    message: Message;
 }
 
 interface IFred_S1 extends IFred {
+    readonly messageFrom: roles.bob;
+    readonly messageType: messages.RES;
+    message?: RES;
     sendADD(add: ADD): Promise<IFred_S2>;
     sendBYE(bye: BYE): Promise<IFred_S3>;
 }
@@ -28,10 +27,7 @@ interface IFred_S2 extends IFred {
 interface IFred_S3 extends IFred {
 }
 
-abstract class Fred {
-    public messageFrom = roles.fred;
-    public messageType = messages.NOMESSAGE;
-    public message = new NOMESSAGE();
+abstract class Fred implements IFred {
     constructor(protected transitionPossible: boolean = true) { }
     ;
     protected checkOneTransitionPossible() {
@@ -42,14 +38,10 @@ abstract class Fred {
 }
 
 class Fred_S1 extends Fred implements IFred_S1 {
-    constructor(messageFrom?: roles, messageType?: messages, message?: Message) {
+    readonly messageFrom = roles.bob;
+    readonly messageType = messages.RES;
+    constructor(public message?: RES) {
         super();
-        if (messageFrom)
-            super.messageFrom = messageFrom;
-        if (messageType)
-            super.messageType = messageType;
-        if (message)
-            super.message = message;
     }
     async sendADD(add: ADD): Promise<IFred_S2> {
         super.checkOneTransitionPossible();
@@ -78,7 +70,7 @@ class Fred_S2 extends Fred implements IFred_S2 {
         return new Promise(resolve => {
             switch (msg.name + msg.from) {
                 case RES.name + roles.bob: {
-                    resolve(new Fred_S1(msg.from, messages.RES, msg));
+                    resolve(new Fred_S1((<RES>msg)));
                     break;
                 }
             }
@@ -103,5 +95,5 @@ async function executeProtocol(f: (Fred_Start: Fred_Start) => Promise<Fred_End>,
     return new Promise<Fred_End>(resolve => resolve(done));
 }
 
-export { IFred, IFred_S1, IFred_S2, IFred_S3, messages, Fred_Start, Fred_End, executeProtocol, roles };
+export { IFred, IFred_S2, messages, Fred_Start, Fred_End, executeProtocol, roles };
 
